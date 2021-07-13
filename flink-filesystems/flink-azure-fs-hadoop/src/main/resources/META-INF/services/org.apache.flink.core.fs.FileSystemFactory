@@ -15,3 +15,5 @@
 
 org.apache.flink.fs.azurefs.AzureFSFactory
 org.apache.flink.fs.azurefs.SecureAzureFSFactory
+org.apache.flink.fs.azurefs.ABFSAzureFSFactory
+org.apache.flink.fs.azurefs.SecureABFSAzureFSFactory
