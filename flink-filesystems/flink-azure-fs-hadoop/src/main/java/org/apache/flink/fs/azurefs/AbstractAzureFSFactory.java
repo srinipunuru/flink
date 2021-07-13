@@ -25,6 +25,7 @@ import org.apache.flink.runtime.fs.hdfs.HadoopFileSystem;
 import org.apache.flink.runtime.util.HadoopConfigLoader;
 
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,18 +76,26 @@ public abstract class AbstractAzureFSFactory implements FileSystemFactory {
     @Override
     public FileSystem create(URI fsUri) throws IOException {
         checkNotNull(fsUri, "passed file system URI object should not be null");
-        LOG.info("Trying to load and instantiate Azure File System");
+        LOG.info("Trying to load and instantiate Azure File System for {}", fsUri);
         return new HadoopFileSystem(createInitializedAzureFS(fsUri, flinkConfig));
     }
 
-    // uri is of the form: wasb(s)://yourcontainer@youraccount.blob.core.windows.net/testDir
+    // uri is of the form: wasb(s)://yourcontainer@youraccount.blob.core.windows.net/testDir (or)
+    // abfs(s):////yourcontainer@youraccount.dfs.core.windows.net/testDir
     private org.apache.hadoop.fs.FileSystem createInitializedAzureFS(
             URI fsUri, Configuration flinkConfig) throws IOException {
         org.apache.hadoop.conf.Configuration hadoopConfig = configLoader.getOrLoadHadoopConfig();
 
-        org.apache.hadoop.fs.FileSystem azureFS = new NativeAzureFileSystem();
-        azureFS.initialize(fsUri, hadoopConfig);
-
-        return azureFS;
+        if (fsUri.getScheme().startsWith("wasb")) {
+            LOG.info("Trying to load wasb filesystem.");
+            org.apache.hadoop.fs.FileSystem azureFS = new NativeAzureFileSystem();
+            azureFS.initialize(fsUri, hadoopConfig);
+            return azureFS;
+        } else {
+            LOG.info("Trying to load abfs filesystem.");
+            org.apache.hadoop.fs.FileSystem azureFS = new AzureBlobFileSystem();
+            azureFS.initialize(fsUri, hadoopConfig);
+            return azureFS;
+        }
     }
 }
