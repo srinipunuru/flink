@@ -10,6 +10,7 @@ This project bundles the following dependencies under the Apache Software Licens
 - org.apache.hadoop:hadoop-auth:3.3.1
 - org.apache.hadoop:hadoop-common:3.3.1
 - org.apache.hadoop.thirdparty:hadoop-shaded-guava:1.1.1
+- org.apache.hadoop.thirdparty:hadoop-shaded-protobuf_3_7:1.1.1
 - org.apache.htrace:htrace-core4:4.1.0-incubating
 - org.apache.kerby:kerb-core:1.0.1
 - org.apache.kerby:kerby-pkix:1.0.1
