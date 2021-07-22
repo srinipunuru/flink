@@ -37,8 +37,8 @@ import java.util.Set;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Abstract factory for AzureFS. Subclasses override to specify the correct scheme (wasb / wasbs / abfs/ abfss).
- * Based on Azure HDFS support in the <a
+ * Abstract factory for AzureFS. Subclasses override to specify the correct scheme (wasb / wasbs /
+ * abfs/ abfss). Based on Azure HDFS support in the <a
  * href="https://hadoop.apache.org/docs/current/hadoop-azure/index.html">hadoop-azure</a> module.
  */
 public abstract class AbstractAzureFSFactory implements FileSystemFactory {
