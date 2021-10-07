@@ -109,3 +109,6 @@ MVN_GLOBAL_OPTIONS_WITHOUT_MIRROR+="$PROFILE "
 export MVN_GLOBAL_OPTIONS="${MVN_GLOBAL_OPTIONS_WITHOUT_MIRROR} "
 # use google mirror everywhere
 MVN_GLOBAL_OPTIONS+="--settings $MAVEN_MIRROR_CONFIG_FILE "
+# disable licensing check
+MVN_GLOBAL_OPTIONS+="-Dlicense.skipDownloadLicenses "
+

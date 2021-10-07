@@ -14,6 +14,8 @@
 # limitations under the License.
 
 
+trigger: none
+
 resources:
   containers:
   # Container with Maven 3.2.5, SSL to have the same environment everywhere.

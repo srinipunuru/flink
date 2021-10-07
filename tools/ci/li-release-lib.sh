@@ -47,7 +47,49 @@ echo "==========================================================================
 
 EXIT_CODE=0
 
-run_mvn clean deploy -DaltDeploymentRepository=validation_repository::default::file:$MVN_VALIDATION_DIR $MAVEN_OPTS -Dflink.convergence.phase=install -Pcheck-convergence -Dflink.forkCount=2 \
+if [ -z "$JFROG_USERNAME_ENV" ]; then
+  echo "ERROR: jfrog username isn't provided"
+  exit 1
+fi
+if [ -z "$JFROG_PASSWORD_ENV" ]; then
+  echo "ERROR: jfrog password isn't provided"
+  exit 1
+  echo
+fi
+
+if [ -z "$RELEASE_VERSION_OVERRIDE" ]; then
+  echo "Generating build version"
+  # we first get calcite's version. We expect that this will be updated if we sync with Apache Calcite
+  OPEN_SOURCE_VERSION=$(grep -A1 "flink-parent</artifactId>" pom.xml  | grep  -E "<version>(.*)</version>" | cut -d'>' -f2 | cut -d'<' -f1 | sed  's/[^0-9.]*//g')
+  OPEN_SOURCE_MAJ_VERSION=$(cut -d'.' -f1 <<< $OPEN_SOURCE_VERSION)
+  OPEN_SOURCE_MIN_VERSION=$(cut -d'.' -f2 <<< $OPEN_SOURCE_VERSION)
+  LI_MAJ_VERSION=$(printf "%d%02d\n" $OPEN_SOURCE_MAJ_VERSION $OPEN_SOURCE_MIN_VERSION)
+  
+  # next, we get the hash of the latest commit that tracks Apache Calcite. We expect that this will be updated if we sync with Apache Calcite
+  #APACHE_CALCITE_LAST_COMMIT_HASH=$(grep -E "<calciteCommitHash>(.*)</calciteCommitHash>" pom.xml | cut -d'>' -f2 | cut -d'<' -f1)
+  # next, we count the number of commits we have made on top of Apache Calcite since the last sync.
+  #GIT_COMMIT_COUNT=$(git rev-list --count $APACHE_CALCITE_LAST_COMMIT_HASH..HEAD)
+  # next, we create an internal version. 100 is an arbitrary seed
+  # now we can construct a build version
+  if [ -z "$DEV_VERSION" ]; then
+    BUILD_VERSION="${LI_MAJ_VERSION}.${LI_MIN_VERSION}"
+  else
+    BUILD_VERSION="${LI_MAJ_VERSION}.${LI_MIN_VERSION}.${DEV_VERSION}"
+  fi
+  echo "Current build version: ${BUILD_VERSION}"
+else 
+  BUILD_VERSION=$RELEASE_VERSION_OVERRIDE
+  echo "Current build version: ${BUILD_VERSION}"
+fi
+
+
+run_mvn clean 
+# override Maven coordinates to LinkedIn version
+# This line will change .pom files automatically. If it runs in local, it's necessary to manually revert all the changes.
+run_mvn versions:set -DnewVersion=$BUILD_VERSION -DoldVersion=* -DgroupId=org.apache.flink -DartifactId=* 
+# Need to revert the override for dummy module force-shading 
+run_mvn versions:set -DnewVersion=1.12-SNAPSHOT -DoldVersion=* -DgroupId=org.apache.flink -DartifactId=force-shading 
+run_mvn deploy -DaltDeploymentRepository=validation_repository::default::file:$MVN_VALIDATION_DIR $MAVEN_OPTS -Dflink.convergence.phase=install -Djfrog.exec.publishArtifacts=true -Djfrog.publisher.password=$JFROG_PASSWORD_ENV -Djfrog.publisher.username=$JFROG_USERNAME_ENV -Pcheck-convergence -Dflink.forkCount=2 \
     -Dflink.forkCountTestPackage=2 -Dmaven.javadoc.skip=true -U -DskipTests | tee $MVN_CLEAN_COMPILE_OUT
 
 EXIT_CODE=${PIPESTATUS[0]}
@@ -66,56 +108,3 @@ if [ $EXIT_CODE != 0 ]; then
 
     exit $EXIT_CODE
 fi
-
-echo "============ Checking Javadocs ============"
-
-# use the same invocation as on buildbot (https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster/master1/projects/flink.conf)
-run_mvn javadoc:aggregate -Paggregate-scaladoc -DadditionalJOption='-Xdoclint:none' \
-      -Dmaven.javadoc.failOnError=false -Dcheckstyle.skip=true -Denforcer.skip=true \
-      -Dheader=someTestHeader > javadoc.out
-EXIT_CODE=$?
-if [ $EXIT_CODE != 0 ] ; then
-  echo "ERROR in Javadocs. Printing full output:"
-  cat javadoc.out ; rm javadoc.out
-  exit $EXIT_CODE
-fi
-
-echo "============ Checking Scaladocs ============"
-
-cd flink-scala
-run_mvn scala:doc 2> scaladoc.out
-EXIT_CODE=$?
-if [ $EXIT_CODE != 0 ] ; then
-  echo "ERROR in Scaladocs. Printing full output:"
-  cat scaladoc.out ; rm scaladoc.out
-  exit $EXIT_CODE
-fi
-cd ..
-
-echo "============ Checking scala suffixes ============"
-
-${CI_DIR}/verify_scala_suffixes.sh "$CI_DIR" "$(pwd)" || exit $?
-
-echo "============ Checking shaded dependencies ============"
-
-check_shaded_artifacts
-EXIT_CODE=$(($EXIT_CODE+$?))
-check_shaded_artifacts_s3_fs hadoop
-EXIT_CODE=$(($EXIT_CODE+$?))
-check_shaded_artifacts_s3_fs presto
-EXIT_CODE=$(($EXIT_CODE+$?))
-check_shaded_artifacts_connector_elasticsearch 5
-EXIT_CODE=$(($EXIT_CODE+$?))
-check_shaded_artifacts_connector_elasticsearch 6
-EXIT_CODE=$(($EXIT_CODE+$?))
-
-#echo "============ Run license check ============"
-
-#find $MVN_VALIDATION_DIR
-
-#if [[ ${PROFILE} != *"scala-2.12"* ]]; then
-#  ${CI_DIR}/license_check.sh $MVN_CLEAN_COMPILE_OUT $CI_DIR $(pwd) $MVN_VALIDATION_DIR || exit $?
-#fi
-
-exit $EXIT_CODE
-

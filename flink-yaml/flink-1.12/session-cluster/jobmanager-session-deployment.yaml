@@ -43,8 +43,9 @@ spec:
           mountPath: /opt/flink/conf
         securityContext:
           runAsUser: 9999  # refers to user _flink_ from official flink image, change if necessary
-      #imagePullSecrets:
-      #- name: acr-creds
+
+      imagePullSecrets:
+      - name: acr-creds
       volumes:
       - name: shared-state
         persistentVolumeClaim:
