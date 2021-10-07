@@ -44,6 +44,36 @@
 			<fileMode>0644</fileMode>
 		</file>
 
+		<!-- Other libs -->
+
+		<file>
+			<source>../flink-connectors/flink-sql-connector-hbase-2.2/target/flink-sql-connector-hbase-2.2_${scala.binary.version}-${project.version}.jar</source>
+			<outputDirectory>opt/</outputDirectory>
+			<destName>flink-sql-connector-hbase-2.2_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+
+		<file>
+			<source>../flink-connectors/flink-sql-connector-kafka/target/flink-sql-connector-kafka_${scala.binary.version}-${project.version}.jar</source>
+			<outputDirectory>opt/</outputDirectory>
+			<destName>flink-sql-connector-kafka_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+
+		<file>
+			<source>../flink-formats/flink-sql-parquet/target/flink-sql-parquet_${scala.binary.version}-${project.version}.jar</source>
+			<outputDirectory>opt/</outputDirectory>
+			<destName>flink-sql-parquet_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+
+		<file>
+			<source>../flink-formats/flink-sql-orc/target/flink-sql-orc_${scala.binary.version}-${project.version}.jar</source>
+			<outputDirectory>opt/</outputDirectory>
+			<destName>flink-sql-orc_${scala.binary.version}-${project.version}.jar</destName>
+			<fileMode>0644</fileMode>
+		</file>
+
 		<!-- Gelly -->
 		<file>
 			<source>../flink-libraries/flink-gelly/target/flink-gelly_${scala.binary.version}-${project.version}.jar</source>

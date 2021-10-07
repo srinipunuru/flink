@@ -1,0 +1,72 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+jobs:
+  - job: ${{parameters.stage_name}}_binary
+    pool:
+      vmImage: 'ubuntu-16.04'
+    container: flink-build-container
+    workspace:
+      clean: all
+    steps:
+      - task: Cache@2
+        displayName: Cache Maven local repo
+        inputs:
+          key: $(CACHE_KEY)
+          restoreKeys: $(CACHE_FALLBACK_KEY)
+          path: $(MAVEN_CACHE_FOLDER)
+        continueOnError: true
+      - task: CmdLine@2
+        displayName: Build snapshot binary release
+        inputs:
+          script: |
+            source ./tools/ci/maven-utils.sh
+            setup_maven
+            run_mvn -version
+            export MVN="run_mvn"
+
+            export RELEASE_VERSION=$(MVN_RUN_VERBOSE=false run_mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+            echo "Determined RELEASE_VERSION as '$RELEASE_VERSION' "
+            cd tools
+            MVN_RUN_VERBOSE=true SKIP_GPG=true ./releasing/create_binary_release.sh
+            
+            echo "Created files:"
+            find ./releasing/release
+            echo "Copying to docker folder:"
+            cp ./releasing/release/flink-$RELEASE_VERSION-bin-scala_2.11.tgz ../docker/flink.tgz
+            cd ..      
+      # Publish the binary release as a pipeline artifact on ADO
+      - task: PublishPipelineArtifact@1
+        displayName: Upload snapshot binary release
+        inputs:
+          targetPath: ./tools/releasing/release
+          artifact: nightly-release
+      # Uncomment below if you just want to build the docker image.
+      # - task: Docker@2
+      #   displayName: Build an image
+      #   inputs:
+      #     command: build
+      #     dockerfile: '$(Build.SourcesDirectory)/docker/Dockerfile'
+      #     tags: |
+      #       $(tag)
+      - task: Docker@2
+        displayName: Build and Push an image
+        inputs:
+          containerRegistry: 'acrdocker'
+          repository: 'LiFlink'
+          command: 'buildAndPush'
+          Dockerfile: '$(Build.SourcesDirectory)/docker/Dockerfile'
+          tags: |
+            $(tag)
