@@ -15,6 +15,7 @@
 
 jobs:
   - job: ${{parameters.stage_name}}_binary
+    timeoutInMinutes: 120
     pool:
       vmImage: 'ubuntu-16.04'
     container: flink-build-container
