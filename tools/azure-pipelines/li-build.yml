@@ -13,16 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-schedules:
-- cron: "0 7 * * *"
-  displayName: Nightly LinkedIn build and push container image
-  branches:
-    include:    
-    - li-release-1.12
-    - li-master
-  always: true # run even if there were no changes to the mentioned branches
-
-trigger: none
 
 resources:
   containers:
