@@ -185,20 +185,7 @@ stages:
             getBuildVersion
             echo "##vso[task.setvariable variable=LI_RELEASE_VERSION]$BUILD_VERSION"
 
-      - task: SendEmail@1
-        inputs:
-          To: 'hejiang@linkedin.com'
-          From: $(gmail_address)
-          Subject: 'Notification: Flink Release completed'
-          Body: 'Released by: $(Build.QueuedBy) 
-           version: RELEASE-$(LI_RELEASE_VERSION)'
-          BodyAsHtml: false
-          AddAttachment: false
-          SmtpServer: 'smtp.gmail.com'
-          SmtpPort: '587'
-          SmtpUsername: $(gmail_address)
-          SmtpPassword:  $(gmail_password)
-          UseSSL: true
+
 
           
     

@@ -37,6 +37,8 @@ MVN_VALIDATION_DIR="/tmp/flink-validation-deployment"
 source "${CI_DIR}/stage.sh"
 source "${CI_DIR}/shade.sh"
 source "${CI_DIR}/maven-utils.sh"
+source "${CI_DIR}/li-utils.sh"
+
 
 echo "Maven version:"
 run_mvn -version
@@ -57,38 +59,14 @@ if [ -z "$JFROG_PASSWORD_ENV" ]; then
   echo
 fi
 
-if [ -z "$RELEASE_VERSION_OVERRIDE" ]; then
-  echo "Generating build version"
-  # we first get calcite's version. We expect that this will be updated if we sync with Apache Calcite
-  OPEN_SOURCE_VERSION=$(grep -A1 "flink-parent</artifactId>" pom.xml  | grep  -E "<version>(.*)</version>" | cut -d'>' -f2 | cut -d'<' -f1 | sed  's/[^0-9.]*//g')
-  OPEN_SOURCE_MAJ_VERSION=$(cut -d'.' -f1 <<< $OPEN_SOURCE_VERSION)
-  OPEN_SOURCE_MIN_VERSION=$(cut -d'.' -f2 <<< $OPEN_SOURCE_VERSION)
-  LI_MAJ_VERSION=$(printf "%d%02d\n" $OPEN_SOURCE_MAJ_VERSION $OPEN_SOURCE_MIN_VERSION)
-  
-  # next, we get the hash of the latest commit that tracks Apache Calcite. We expect that this will be updated if we sync with Apache Calcite
-  #APACHE_CALCITE_LAST_COMMIT_HASH=$(grep -E "<calciteCommitHash>(.*)</calciteCommitHash>" pom.xml | cut -d'>' -f2 | cut -d'<' -f1)
-  # next, we count the number of commits we have made on top of Apache Calcite since the last sync.
-  #GIT_COMMIT_COUNT=$(git rev-list --count $APACHE_CALCITE_LAST_COMMIT_HASH..HEAD)
-  # next, we create an internal version. 100 is an arbitrary seed
-  # now we can construct a build version
-  if [ -z "$DEV_VERSION" ]; then
-    BUILD_VERSION="${LI_MAJ_VERSION}.${LI_MIN_VERSION}"
-  else
-    BUILD_VERSION="${LI_MAJ_VERSION}.${LI_MIN_VERSION}.${DEV_VERSION}"
-  fi
-  echo "Current build version: ${BUILD_VERSION}"
-else 
-  BUILD_VERSION=$RELEASE_VERSION_OVERRIDE
-  echo "Current build version: ${BUILD_VERSION}"
-fi
-
+BUILD_VERSION=$(getBuildVersion)
 
 run_mvn clean 
 # override Maven coordinates to LinkedIn version
 # This line will change .pom files automatically. If it runs in local, it's necessary to manually revert all the changes.
 run_mvn versions:set -DnewVersion=$BUILD_VERSION -DoldVersion=* -DgroupId=org.apache.flink -DartifactId=* 
 # Need to revert the override for dummy module force-shading 
-run_mvn versions:set -DnewVersion=1.12-SNAPSHOT -DoldVersion=* -DgroupId=org.apache.flink -DartifactId=force-shading 
+run_mvn versions:set -DnewVersion=1.13-SNAPSHOT -DoldVersion=* -DgroupId=org.apache.flink -DartifactId=force-shading 
 run_mvn deploy -DaltDeploymentRepository=validation_repository::default::file:$MVN_VALIDATION_DIR $MAVEN_OPTS -Dflink.convergence.phase=install -Djfrog.exec.publishArtifacts=true -Djfrog.publisher.password=$JFROG_PASSWORD_ENV -Djfrog.publisher.username=$JFROG_USERNAME_ENV -Pcheck-convergence -Dflink.forkCount=2 \
     -Dflink.forkCountTestPackage=2 -Dmaven.javadoc.skip=true -U -DskipTests | tee $MVN_CLEAN_COMPILE_OUT
 
