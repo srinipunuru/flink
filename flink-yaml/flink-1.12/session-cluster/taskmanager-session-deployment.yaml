@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-taskmanager
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: flink
+      component: taskmanager
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "9249"
+        prometheus.io/scrape: "true"
+      labels:
+        app: flink
+        component: taskmanager
+    spec:
+      containers:
+      - name: taskmanager
+        image: flinkhilotest2.azurecr.io/liflink:$TAG
+        imagePullPolicy: Always
+        args: ["taskmanager"]
+        # To use HPA it looks like we need to specify resource limits 
+        resources:
+          # limits:
+          #   cpu: 500m
+          #   memory: "538Mi"
+          requests:
+            cpu: 200m
+            memory: "1024Mi"            
+        ports:
+        - containerPort: 6122
+          name: rpc
+        - containerPort: 6125
+          name: query-state
+        livenessProbe:
+          tcpSocket:
+            port: 6122
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        volumeMounts:
+        - name: logs
+          mountPath: /opt/flink/log/
+        - name: shared-state
+          mountPath: /opt/flink/shared-state/
+        - name: flink-config-volume
+          mountPath: /opt/flink/conf/
+        securityContext:
+          runAsUser: 9999  # refers to user _flink_ from official flink image, change if necessary
+      imagePullSecrets:
+      - name: acr-creds
+      volumes:    
+      - name: shared-state
+        persistentVolumeClaim:
+          claimName: azure-file1
+      - name: logs
+        persistentVolumeClaim:
+          claimName: azure-file2
+      - name: flink-config-volume
+        configMap:
+          name: flink-config
+          items:
+          - key: flink-conf.yaml
+            path: flink-conf.yaml
+          - key: log4j-console.properties
+            path: log4j-console.properties

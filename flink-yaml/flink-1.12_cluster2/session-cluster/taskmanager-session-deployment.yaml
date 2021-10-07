@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-taskmanager-c2
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: flink-c2
+      component: c2-taskmanager
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "9249"
+        prometheus.io/scrape: "true"
+      labels:
+        app: flink-c2
+        component: c2-taskmanager
+    spec:
+      containers:
+      - name: taskmanager
+        # image: apache/flink:1.12.0-scala_2.11
+        image: ghcr.io/srinipunuru/flink-image:1.12.0.2
+        imagePullPolicy: Always
+        args: ["taskmanager"]
+        # To use HPA it looks like we need to specify resource limits 
+        resources:
+          # limits:
+          #   cpu: 500m
+          #   memory: "538Mi"
+          requests:
+            cpu: 200m
+            memory: "1024Mi"            
+        ports:
+        - containerPort: 6122
+          name: rpc
+        - containerPort: 6125
+          name: query-state
+        livenessProbe:
+          tcpSocket:
+            port: 6122
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        volumeMounts:
+        - name: shared-state
+          mountPath: /opt/flink/shared-state/
+        - name: flink-config-volume
+          mountPath: /opt/flink/conf/
+        securityContext:
+          runAsUser: 9999  # refers to user _flink_ from official flink image, change if necessary
+      volumes:    
+      - name: shared-state
+        persistentVolumeClaim:
+          claimName: azure-file1-c2
+      - name: flink-config-volume
+        configMap:
+          name: flink-config-c2
+          items:
+          - key: flink-conf.yaml
+            path: flink-conf.yaml
+          - key: log4j-console.properties
+            path: log4j-console.properties

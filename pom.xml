@@ -1523,6 +1523,9 @@ under the License.
 
 						<!-- AWS SDK config that does not support license headers -->
 						<exclude>**/awssdk/global/handlers/execution.interceptors</exclude>
+						<!-- flink-yaml -->
+						<exclude>flink-yaml/**</exclude>
+
 					</excludes>
 				</configuration>
 			</plugin>

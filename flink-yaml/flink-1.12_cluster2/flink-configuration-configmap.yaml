@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flink-config-c2
+  labels:
+    app: flink
+data:
+  sql-client-defaults.yaml: |+
+    # Sql client configuration from here https://ci.apache.org/projects/flink/flink-docs-stable/dev/table/sqlClient.html
+    execution:
+      planner: blink                        # optional: either 'blink' (default) or 'old'
+      type: streaming                       # required: execution mode either 'batch' or 'streaming'
+      result-mode: table                    # required: either 'table' or 'changelog'
+      max-table-result-rows: 1000000        # optional: maximum number of maintained rows in
+                                            #   'table' mode (1000000 by default, smaller 1 means unlimited)
+      time-characteristic: event-time       # optional: 'processing-time' or 'event-time' (default)
+      parallelism: 2                        # optional: Flink's parallelism (1 by default)
+      periodic-watermarks-interval: 200     # optional: interval for periodic watermarks (200 ms by default)
+      max-parallelism: 16                   # optional: Flink's maximum parallelism (128 by default)
+      min-idle-state-retention: 0           # optional: table program's minimum idle state time
+      max-idle-state-retention: 0           # optional: table program's maximum idle state time
+      current-catalog: default_catalog      # optional: name of the current catalog of the session ('default_catalog' by default)
+      current-database: default_database    # optional: name of the current database of the current catalog
+                                            #   (default database of the current catalog by default)
+      restart-strategy:                     # optional: restart strategy
+        type: fallback                      #   "fallback" to global restart strategy by default
+
+  flink-conf.yaml: |+
+    jobmanager.rpc.address: flink-jobmanager-c2
+    taskmanager.numberOfTaskSlots: 2
+    blob.server.port: 6124
+    jobmanager.rpc.port: 6123
+    taskmanager.rpc.port: 6122
+    queryable-state.proxy.ports: 6125
+    jobmanager.memory.process.size: 1600m
+    taskmanager.memory.process.size: 1728m
+    parallelism.default: 2
+
+    # Blob storage access keys
+    fs.azure.account.key.spunuruadlstest1.blob.core.windows.net: gGyQVzrxdT0mfpIMmlUGfBEqXxirjH/CoItAPhh8K5+bv2lAFoD7qepDzyWJuu+2S9MfYBnG01ZUcQyFSf+pwg==
+    fs.azure.account.key.spunurutest1.blob.core.windows.net: AeGXg7xAscqFMkoBRLfrmwaIl5ecVjquYG2DY+fW6WsYJhae7Ijfw84HVNXE4SQn+o5Pm9iOFePH4Jx+2vMPNg==
+
+    # https://ci.apache.org/projects/flink/flink-docs-release-1.12/ops/config.html#checkpointing
+    execution.checkpointing.interval: 60000
+
+    # Metrics reporting
+    # metrics.reporters: prom
+    metrics.reporter.prom.class: org.apache.flink.metrics.prometheus.PrometheusReporter
+
+    # https://ci.apache.org/projects/flink/flink-docs-release-1.12/ops/config.html#checkpoints-and-state-backends
+    state.backend: rocksdb   
+    state.checkpoints.dir: file:///opt/flink/shared-state/checkpoints
+    state.checkpoints.num-retained: 5
+    state.savepoints.dir: file:///opt/flink/shared-state/savepoints
+    state.backend.incremental: true
+
+    # TODO This cluster-id should be unique per flink cluster.
+    # kubernetes.cluster-id: flink156
+    # high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    # high-availability.storageDir: /opt/flink/shared-state/
+    # restart-strategy: fixed-delay
+    # restart-strategy.fixed-delay.attempts: 10
+  log4j-console.properties: |+
+    # This affects logging for both user code and Flink
+    rootLogger.level = INFO
+    rootLogger.appenderRef.console.ref = ConsoleAppender
+    rootLogger.appenderRef.rolling.ref = RollingFileAppender
+
+    # Uncomment this if you want to _only_ change Flink's logging
+    #logger.flink.name = org.apache.flink
+    #logger.flink.level = INFO
+
+    # The following lines keep the log level of common libraries/connectors on
+    # log level INFO. The root logger does not override this. You have to manually
+    # change the log levels here.
+    logger.akka.name = akka
+    logger.akka.level = INFO
+    logger.kafka.name= org.apache.kafka
+    logger.kafka.level = INFO
+    logger.hadoop.name = org.apache.hadoop
+    logger.hadoop.level = INFO
+    logger.zookeeper.name = org.apache.zookeeper
+    logger.zookeeper.level = INFO
+
+    # Log all infos to the console
+    appender.console.name = ConsoleAppender
+    appender.console.type = CONSOLE
+    appender.console.layout.type = PatternLayout
+    appender.console.layout.pattern = %d{yyyy-MM-dd HH:mm:ss,SSS} %-5p %-60c %x - %m%n
+
+    # Log all infos in the given rolling file
+    appender.rolling.name = RollingFileAppender
+    appender.rolling.type = RollingFile
+    appender.rolling.append = false
+    appender.rolling.fileName = ${sys:log.file}
+    appender.rolling.filePattern = ${sys:log.file}.%i
+    appender.rolling.layout.type = PatternLayout
+    appender.rolling.layout.pattern = %d{yyyy-MM-dd HH:mm:ss,SSS} %-5p %-60c %x - %m%n
+    appender.rolling.policies.type = Policies
+    appender.rolling.policies.size.type = SizeBasedTriggeringPolicy
+    appender.rolling.policies.size.size=100MB
+    appender.rolling.strategy.type = DefaultRolloverStrategy
+    appender.rolling.strategy.max = 10
+
+    # Suppress the irrelevant (wrong) warnings from the Netty channel handler
+    logger.netty.name = org.apache.flink.shaded.akka.org.jboss.netty.channel.DefaultChannelPipeline
+    logger.netty.level = OFF
