@@ -66,7 +66,7 @@ run_mvn clean
 # This line will change .pom files automatically. If it runs in local, it's necessary to manually revert all the changes.
 run_mvn versions:set -DnewVersion=$BUILD_VERSION -DoldVersion=* -DgroupId=org.apache.flink -DartifactId=* 
 # Need to revert the override for dummy module force-shading 
-run_mvn versions:set -DnewVersion=1.13-SNAPSHOT -DoldVersion=* -DgroupId=org.apache.flink -DartifactId=force-shading 
+run_mvn versions:set -DnewVersion=1.14-SNAPSHOT -DoldVersion=* -DgroupId=org.apache.flink -DartifactId=force-shading 
 run_mvn deploy -DaltDeploymentRepository=validation_repository::default::file:$MVN_VALIDATION_DIR $MAVEN_OPTS -Dflink.convergence.phase=install -Djfrog.exec.publishArtifacts=true -Djfrog.publisher.password=$JFROG_PASSWORD_ENV -Djfrog.publisher.username=$JFROG_USERNAME_ENV -Pcheck-convergence -Dflink.forkCount=2 \
     -Dflink.forkCountTestPackage=2 -Dmaven.javadoc.skip=true -U -DskipTests | tee $MVN_CLEAN_COMPILE_OUT
 
