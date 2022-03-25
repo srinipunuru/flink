@@ -92,7 +92,9 @@ public class DataGenTableSourceFactoryTest {
                                                 "c",
                                                 DataTypes.ROW(
                                                         DataTypes.FIELD(
-                                                                "d", DataTypes.TIMESTAMP()))))));
+                                                                "d", DataTypes.TIMESTAMP()))))),
+                        Column.physical("21", DataTypes.BINARY(2)),
+                        Column.physical("22", DataTypes.VARBINARY(2)));
 
         DescriptorProperties descriptor = new DescriptorProperties();
         descriptor.putString(FactoryUtil.CONNECTOR.key(), "datagen");

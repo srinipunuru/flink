@@ -33,6 +33,7 @@ import org.apache.flink.table.data.GenericMapData;
 import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.types.logical.ArrayType;
 import org.apache.flink.table.types.logical.BigIntType;
+import org.apache.flink.table.types.logical.BinaryType;
 import org.apache.flink.table.types.logical.BooleanType;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.DayTimeIntervalType;
@@ -46,6 +47,7 @@ import org.apache.flink.table.types.logical.MultisetType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.SmallIntType;
 import org.apache.flink.table.types.logical.TinyIntType;
+import org.apache.flink.table.types.logical.VarBinaryType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.table.types.logical.YearMonthIntervalType;
 
@@ -64,6 +66,8 @@ public class RandomGeneratorVisitor extends DataGenVisitorBase {
     public static final int RANDOM_STRING_LENGTH_DEFAULT = 100;
 
     private static final int RANDOM_COLLECTION_LENGTH_DEFAULT = 3;
+
+    private static final int RANDOM_VARBINARY_LENGTH_DEFAULT = 100;
 
     private final ConfigOptions.OptionBuilder minKey;
 
@@ -105,6 +109,33 @@ public class RandomGeneratorVisitor extends DataGenVisitorBase {
                         .defaultValue(RANDOM_STRING_LENGTH_DEFAULT);
         return DataGeneratorContainer.of(
                 getRandomStringGenerator(config.get(lenOption)), lenOption);
+    }
+
+    @Override
+    public DataGeneratorContainer visit(BinaryType binaryType) {
+        int length = binaryType.getLength();
+        return DataGeneratorContainer.of(
+                RandomGenerator.arrayGenerator(
+                        RandomGenerator.byteGenerator(Byte.MIN_VALUE, Byte.MAX_VALUE), length));
+    }
+
+    @Override
+    public DataGeneratorContainer visit(VarBinaryType varBinaryType) {
+        ConfigOption<Integer> lenOption =
+                key(DataGenConnectorOptionsUtil.FIELDS
+                                + "."
+                                + name
+                                + "."
+                                + DataGenConnectorOptionsUtil.LENGTH)
+                        .intType()
+                        .defaultValue(
+                                Math.min(
+                                        varBinaryType.getLength(),
+                                        RANDOM_VARBINARY_LENGTH_DEFAULT));
+        return DataGeneratorContainer.of(
+                RandomGenerator.arrayGenerator(
+                        RandomGenerator.byteGenerator(Byte.MIN_VALUE, Byte.MAX_VALUE),
+                        config.get(lenOption)));
     }
 
     @Override
